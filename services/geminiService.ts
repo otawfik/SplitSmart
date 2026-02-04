@@ -2,13 +2,16 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { ReceiptData } from "../types";
 
-const MODEL_NAME = 'gemini-3-pro-preview';
+// For vision tasks (receipt parsing), flash is excellent and fast.
+const VISION_MODEL = 'gemini-2.5-flash-image';
+// For complex reasoning (chat parsing), pro is better.
+const CHAT_MODEL = 'gemini-3-pro-preview';
 
 export const parseReceiptImage = async (base64Image: string): Promise<ReceiptData> => {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
   
   const response = await ai.models.generateContent({
-    model: MODEL_NAME,
+    model: VISION_MODEL,
     contents: {
       parts: [
         {
@@ -18,7 +21,7 @@ export const parseReceiptImage = async (base64Image: string): Promise<ReceiptDat
           },
         },
         {
-          text: "Extract the items, prices, tax, and tip from this receipt. Return ONLY a JSON object matching this schema: { items: [{ name: string, price: number }], tax: number, tip: number, subtotal: number, total: number, currency: string }. Use UUID-like strings for item IDs if possible, or I will generate them."
+          text: "Extract all items from this receipt. Include item name, quantity (if visible, otherwise 1), and unit price or total price for that line. Also extract Tax, Tip/Gratuity, Subtotal, and the Grand Total. Identify the currency symbol. Return ONLY valid JSON."
         }
       ],
     },
@@ -51,10 +54,9 @@ export const parseReceiptImage = async (base64Image: string): Promise<ReceiptDat
 
   const rawJson = JSON.parse(response.text || '{}');
   
-  // Post-process to add IDs
   return {
     ...rawJson,
-    items: rawJson.items.map((item: any, idx: number) => ({
+    items: (rawJson.items || []).map((item: any, idx: number) => ({
       ...item,
       id: `item-${idx}-${Date.now()}`
     }))
@@ -63,24 +65,37 @@ export const parseReceiptImage = async (base64Image: string): Promise<ReceiptDat
 
 export const parseChatCommand = async (
   message: string, 
-  receiptItems: { id: string; name: string }[]
-): Promise<{ assignments: { person: string, items: string[] }[] }> => {
+  receiptItems: { id: string; name: string }[],
+  currentPeople: string[]
+): Promise<{ 
+  assignments: { person: string, items: string[], action: 'add' | 'remove' | 'clear' }[] 
+}> => {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
   
   const prompt = `
-    The user is splitting a bill. Here are the items on the receipt:
+    Context: A user is splitting a restaurant bill. 
+    Current people involved: ${currentPeople.join(', ') || 'None yet'}.
+    Items on receipt:
     ${receiptItems.map(i => `- "${i.name}" (ID: ${i.id})`).join('\n')}
 
     User command: "${message}"
 
-    Determine which person(s) had which item(s).
-    A user might say: "Dhruv had the nachos" or "Sarah and Sue shared the pizza".
-    Return ONLY a JSON object: { assignments: [{ person: string, items: [string] }] } where items is an array of IDs from the list provided above.
-    If multiple people share an item, list that item for each person.
+    Goal: Translate the user's natural language into structured assignments.
+    Actions:
+    - 'add': Assign item(s) to person(s). 
+    - 'remove': Unassign item(s) from person(s).
+    - 'clear': Remove all assignments for a specific person.
+
+    Special cases:
+    - "Everyone" or "Shared" means assign to all currently known people.
+    - If a new name is mentioned, add it to the list.
+
+    Return ONLY a JSON object: { assignments: [{ person: string, items: [string], action: 'add'|'remove'|'clear' }] }
+    Use the IDs provided for items.
   `;
 
   const response = await ai.models.generateContent({
-    model: MODEL_NAME,
+    model: CHAT_MODEL,
     contents: prompt,
     config: {
       responseMimeType: "application/json",
@@ -93,8 +108,10 @@ export const parseChatCommand = async (
               type: Type.OBJECT,
               properties: {
                 person: { type: Type.STRING },
-                items: { type: Type.ARRAY, items: { type: Type.STRING } }
-              }
+                items: { type: Type.ARRAY, items: { type: Type.STRING } },
+                action: { type: Type.STRING, enum: ['add', 'remove', 'clear'] }
+              },
+              required: ["person", "items", "action"]
             }
           }
         }
