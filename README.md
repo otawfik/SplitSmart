@@ -47,7 +47,7 @@ Since this app uses an AI model, you need to provide your API Key:
 
 ### 3. Update the Link
 Once the deployment finishes (usually takes 1-2 minutes), your app will be live at:
-`https://YOUR_GITHUB_USERNAME.github.io/YOUR_REPO_NAME/`
+`https://otawfik.github.io/SplitSmart/`
 
 *Note: Replace `YOUR_GITHUB_USERNAME` and `YOUR_REPO_NAME` in the link above and the badges at the top of this file.*
 
