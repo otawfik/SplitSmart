@@ -1,6 +1,6 @@
 {
   "name": "SplitSmart AI",
-  "description": "An AI-powered bill splitting app that parses receipts from photos and uses natural language chat to assign items to friends.",
+  "description": "Professional-grade AI utility for automated receipt parsing and intelligent cost distribution among groups.",
   "requestFramePermissions": [
     "camera"
   ]
