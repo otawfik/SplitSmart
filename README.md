@@ -1,63 +1,46 @@
-# SplitSmart AI 🧾✨
+# SplitSmart
 
-> **The smartest way to split group bills using AI Vision and Natural Language.**
+[![build](https://github.com/otawfik/SplitSmart/actions/workflows/ci.yml/badge.svg)](https://github.com/otawfik/SplitSmart/actions/workflows/ci.yml)
 
-[![Live Demo](https://img.shields.io/badge/demo-live_now-6e5494?style=for-the-badge&logo=github)](https://YOUR_GITHUB_USERNAME.github.io/YOUR_REPO_NAME/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
+**Split a group bill by photographing the receipt and saying who had what.**
 
----
+Snap the receipt and Gemini's vision model reads every line item, the tax, the tip and the
+total. Then type it the way you'd say it — *"Alice had the salad"*, *"everyone shared the
+nachos"*, *"move the beer from Alex to Sam"* — and the assignments update live, with tax and
+tip distributed in proportion to what each person actually ordered.
 
-## 🚀 Experience the Future of Splitting Bills
+## How it works
 
-No more manual entry or fiddling with calculators. **SplitSmart AI** transforms a photo of a receipt into an interactive, shared ledger in seconds.
+1. **Scan.** The receipt photo goes to `gemini-2.5-flash-image` with a JSON response schema
+   (items, tax, tip, subtotal, total, currency), so the result is structured data rather than
+   text to be parsed.
+2. **Chat.** Each message goes to `gemini-3-pro-preview` together with the receipt's item IDs
+   and the people so far, and comes back as structured `add` / `remove` / `clear` assignments.
+3. **Settle.** Per-person totals are computed locally (`utils/calculations.ts`): each person's
+   share of tax and tip is proportional to their share of the subtotal.
 
-### [👉 Try the Live Demo](https://YOUR_GITHUB_USERNAME.github.io/YOUR_REPO_NAME/)
+**The API key never reaches the browser.** All Gemini calls go through one server function,
+`api/gemini.ts`, which holds `GEMINI_API_KEY`, accepts only the two models above, and caps
+request size. The browser talks to `/api/gemini` (`services/geminiClient.ts`).
 
----
+## Run locally
 
-## ✨ How It Works
+```bash
+npm install
+echo "GEMINI_API_KEY=your-key" > .env.local   # never committed — .gitignore covers it
+npm run dev                                    # http://localhost:3000
+```
 
-1.  **📸 Scan**: Upload a photo of your receipt. Our AI Vision engine parses every item, price, tax, and tip instantly.
-2.  **💬 Chat**: Tell the app who had what. "Alice had the burger," "Bob and I shared the nachos," or "The wine is for everyone."
-3.  **⚖️ Split**: Watch totals update in real-time. Tax and tip are automatically distributed proportionally based on what each person spent.
+In development, Vite answers `/api/gemini` with the same server function, so there's nothing
+else to run.
 
-## 🛠️ Built With
+## Deploy
 
-- **Intelligence**: Gemini 3 Pro (Vision & NLP) for seamless receipt parsing and intent recognition.
-- **Frontend**: React 19 + TypeScript for a fast, modern, and type-safe user experience.
-- **Styling**: Tailwind CSS for a premium, responsive "split-screen" interface.
-- **Fonts**: Inter & JetBrains Mono for a clean, technical aesthetic.
+Deploys to Vercel as-is: the Vite app is built as static files and `api/gemini.ts` becomes a
+serverless function. Set `GEMINI_API_KEY` in the project's environment variables. Because the
+endpoint is public, give the key a quota or budget limit in Google AI Studio.
 
----
+## Stack
 
-## 🌎 Deployment (How to get your link)
-
-To make this app accessible via a link on your GitHub profile, follow these simple steps:
-
-### 1. Enable GitHub Pages
-1. Go to your repository on GitHub.
-2. Click on **Settings** > **Pages**.
-3. Under **Build and deployment** > **Source**, select `GitHub Actions`.
-
-### 2. Add Your Secret
-Since this app uses an AI model, you need to provide your API Key:
-1. Go to **Settings** > **Secrets and variables** > **Actions**.
-2. Click **New repository secret**.
-3. Name it `API_KEY` and paste your Gemini API key as the value.
-
-### 3. Update the Link
-Once the deployment finishes (usually takes 1-2 minutes), your app will be live at:
-`https://YOUR_GITHUB_USERNAME.github.io/YOUR_REPO_NAME/`
-
-*Note: Replace `YOUR_GITHUB_USERNAME` and `YOUR_REPO_NAME` in the link above and the badges at the top of this file.*
-
----
-
-## 💡 Pro Tips
-
-- **Complex Splits**: The AI is smart. Try: "Divide the appetizers equally among everyone except Sarah."
-- **Instant Recalculation**: If someone changes their mind, just say "Move the fries from Bob to Alice."
-- **Mobile First**: Save the link to your phone's home screen for easy access at restaurants!
-
----
-*Created with a focus on utility, aesthetics, and the power of modern AI.*
+React 19 · TypeScript · Vite · Tailwind CSS · Google Gemini API (`@google/genai`) · Vercel
+Functions
