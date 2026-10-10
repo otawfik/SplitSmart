@@ -2,6 +2,8 @@
 
 [![build](https://github.com/otawfik/SplitSmart/actions/workflows/ci.yml/badge.svg)](https://github.com/otawfik/SplitSmart/actions/workflows/ci.yml)
 
+**[▶ Live demo](https://splitsmart-snowy.vercel.app)**
+
 **Split a group bill by photographing the receipt and saying who had what.**
 
 Snap the receipt and Gemini's vision model reads every line item, the tax, the tip and the
