@@ -1,5 +1,5 @@
+import { generateContent } from "./geminiClient";
 
-import { GoogleGenAI, Type } from "@google/genai";
 import { ReceiptData } from "../types";
 
 // For vision tasks (receipt parsing), flash is excellent and fast.
@@ -8,9 +8,8 @@ const VISION_MODEL = 'gemini-2.5-flash-image';
 const CHAT_MODEL = 'gemini-3-pro-preview';
 
 export const parseReceiptImage = async (base64Image: string): Promise<ReceiptData> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
   
-  const response = await ai.models.generateContent({
+  const response = await generateContent({
     model: VISION_MODEL,
     contents: {
       parts: [
@@ -28,24 +27,24 @@ export const parseReceiptImage = async (base64Image: string): Promise<ReceiptDat
     config: {
       responseMimeType: "application/json",
       responseSchema: {
-        type: Type.OBJECT,
+        type: "OBJECT",
         properties: {
           items: {
-            type: Type.ARRAY,
+            type: "ARRAY",
             items: {
-              type: Type.OBJECT,
+              type: "OBJECT",
               properties: {
-                name: { type: Type.STRING },
-                price: { type: Type.NUMBER }
+                name: { type: "STRING" },
+                price: { type: "NUMBER" }
               },
               required: ["name", "price"]
             }
           },
-          tax: { type: Type.NUMBER },
-          tip: { type: Type.NUMBER },
-          subtotal: { type: Type.NUMBER },
-          total: { type: Type.NUMBER },
-          currency: { type: Type.STRING }
+          tax: { type: "NUMBER" },
+          tip: { type: "NUMBER" },
+          subtotal: { type: "NUMBER" },
+          total: { type: "NUMBER" },
+          currency: { type: "STRING" }
         },
         required: ["items", "tax", "tip", "total"]
       }
@@ -70,7 +69,6 @@ export const parseChatCommand = async (
 ): Promise<{ 
   assignments: { person: string, items: string[], action: 'add' | 'remove' | 'clear' }[] 
 }> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
   
   const prompt = `
     Context: A user is splitting a restaurant bill. 
@@ -94,22 +92,22 @@ export const parseChatCommand = async (
     Use the IDs provided for items.
   `;
 
-  const response = await ai.models.generateContent({
+  const response = await generateContent({
     model: CHAT_MODEL,
     contents: prompt,
     config: {
       responseMimeType: "application/json",
       responseSchema: {
-        type: Type.OBJECT,
+        type: "OBJECT",
         properties: {
           assignments: {
-            type: Type.ARRAY,
+            type: "ARRAY",
             items: {
-              type: Type.OBJECT,
+              type: "OBJECT",
               properties: {
-                person: { type: Type.STRING },
-                items: { type: Type.ARRAY, items: { type: Type.STRING } },
-                action: { type: Type.STRING, enum: ['add', 'remove', 'clear'] }
+                person: { type: "STRING" },
+                items: { type: "ARRAY", items: { type: "STRING" } },
+                action: { type: "STRING", enum: ['add', 'remove', 'clear'] }
               },
               required: ["person", "items", "action"]
             }
